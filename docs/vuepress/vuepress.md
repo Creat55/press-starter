@@ -1,5 +1,8 @@
+---
+sidebarDepth: 3
+---
 # VuePress使用说明
-[[toc]]
+<!-- [[toc]] -->
 ## 安装
 ```bash
 git init
@@ -98,7 +101,7 @@ const onePlusTwoPlusThree = {{ 1 + 2 + 3 }}
 <!-- 仅导入第 1 行至第 10 行 -->
 @[code{1-10}](../foo.js)
 ```
-## 使用自定义容器
+### 使用自定义容器
 VuePress还热心的添加了几个好用的容器
 - tip / warning / danger  
    生成醒目的提示块，比md自带的quote（>）好用  
@@ -136,7 +139,7 @@ VuePress还热心的添加了几个好用的容器
 你可以把一些静态资源放在 Public 目录中，它们会被复制到最终生成的网站的根目录下。
 默认的 Public 目录是 .vuepress/public ，可以通过 public 配置项来修改。
 
-```bash
+```txt
 └─ docs
    ├─ .vuepress
    |  └─ public
@@ -148,7 +151,7 @@ VuePress还热心的添加了几个好用的容器
 
 我们可以这样在当前页面引用 Logo ：
 
-Input
+Input  
 ```md
 ![VuePress Logo](/images/hero.png)
 ```
@@ -156,7 +159,7 @@ Input
 ### 顶部导航
 vuepress是根据md生成静态html，md中的各级标题会做为单页面中的锚点来跳转。  
 而跳转html则需要配置navbar。vuepress将这个任务外包给了主题插件来实现。  
-需要在主题中配置
+需要在主题中配置  
 :::details 在config中配置theme
 ```ts
 import { defaultTheme } from 'vuepress'
@@ -198,3 +201,95 @@ export default {
 }
 ```
 :::
+
+### Frontmeta配置
+在VuePress中，Frontmatter是指在Markdown文件开头用三个"---"包裹的一段YAML代码块。这些YAML代码块可以为文档添加元数据信息，例如页面标题、作者、标签、日期等。另一方面可以定义一些只应用于此页面的一些配置。  
+
+#### 通用Frontmeta
+即每个页面都可以配置的项  
+##### pageClass 
+为当前页面添加额外的类名。  
+```md
+---
+pageClass: custom-page-class
+---
+```
+##### navbar
+类型： `boolean`  
+控制navbar是否在此页面中显示  
+##### externalLinkIcon
+类型： `boolean`
+控制 externalLinkIcon插件是否在此页面中生效  
+
+#### 首页专用
+##### home
+类型： `boolean`  
+声明此页面是否为主页
+##### hero
+首页大图的一系列配置
+###### heroImage
+类型： `string`  
+首页大图的 URL 
+###### heroImageDark
+类型： `string`  
+暗黑模式下首页大图的 URL 
+###### heroAlt
+类型： `string`  
+图片的ALT
+###### heroHeight
+类型： `number`  
+默认值： `280`  
+详情：  
+首页图片 `<img>` 标签的 height 属性。  
+当你的首页图片高度小于默认值时，你可能需要减小该属性。  
+需要注意的是，首页图片的高度同样受到了 CSS 的约束。设置这个属性主要是为了减少由加载首页图片引起的 `累积布局偏移 (CLS)` 。
+###### heroText
+类型： `string` | `null`  
+详情：  
+首页的大标题。  
+如果不设置，则默认使用站点 `title` 。  
+设置为 null 来禁用首页大标题。  
+##### tagline
+类型： `string` | `null`  
+详情：  
+首页的标语。  
+如果不设置，则默认使用站点 `description` 。  
+设置为 `null` 来禁用首页标语。
+###### action
+配置首页的大按钮。  
+示例：
+```md
+---
+actions:
+  - text: 快速上手
+    link: /zh/guide/getting-started.html
+    type: primary
+  - text: 项目简介
+    link: /guide/
+    type: secondary
+---
+```
+##### features
+配置首页特性列表。  
+示例：
+```md
+---
+features:
+  - title: 简洁至上
+    details: 以 Markdown 为中心的项目结构，以最少的配置帮助你专注于写作。
+  - title: Vue 驱动
+    details: 享受 Vue 的开发体验，可以在 Markdown 中使用 Vue 组件，又可以使用 Vue 来开发自定义主题。
+  - title: 高性能
+    details: VuePress 会为每个页面预渲染生成静态的 HTML，同时，每个页面被加载的时候，将作为 SPA 运行。
+---
+```
+##### footer
+配置首页的Footer
+##### footerHtml
+类型： `boolean`  
+详情：  
+是否允许页脚中使用 HTML 。如果设置为 `true` ，那么 `footer` 会被作为 HTML 代码处理。
+
+#### 普通页面
+以下配置的 `Frontmatter` 只会在普通页面中生效。
+
