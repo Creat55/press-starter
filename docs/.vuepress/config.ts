@@ -6,6 +6,7 @@ import { generateNavItems } from "../../src/utils/navbar"
 
 export default defineUserConfig({
   lang: "zh-CN",
+  head: [["link", { rel: "stylesheet", href: "/styles/index.css" }]],
   title: "Creat.Wu's Blog",
   description: "记不住就抄下来",
   plugins: [

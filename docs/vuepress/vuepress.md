@@ -202,9 +202,80 @@ export default {
 ```
 :::
 
-### Frontmeta配置
+## Frontmeta配置
 在VuePress中，Frontmatter是指在Markdown文件开头用三个"---"包裹的一段YAML代码块。这些YAML代码块可以为文档添加元数据信息，例如页面标题、作者、标签、日期等。另一方面可以定义一些只应用于此页面的一些配置。  
 
+Frontmatter 中的字段和配置文件中的站点配置十分类似。你可以通过 Frontmatter 来覆盖当前页面的 lang, title, description 等属性。因此，你可以把 Frontmatter 当作页面级作用域的配置。
+
+同样的，VuePress 有一些内置支持的 Frontmatter 字段，而你使用的`主题`也可能有它自己的特殊 Frontmatter 。
+
+### VuePress 的Frontmeta配置
+
+#### title
+:::details
+类型： `string`  
+页面的标题。  
+如果你不在 Frontmatter 中设置 title ，那么页面中第一个一级标题（即 # title）的内容会被当作标题使用。
+:::
+#### description
+:::details
+类型： `string`
+页面的描述。  
+它将会覆盖站点配置中的 description 配置项。
+:::
+#### head
+:::details
+类型： `HeadConfig[]`  
+页面 `<head>` 标签内添加的额外标签。  
+示例：
+```md
+---
+head:
+  - - meta
+    - name: foo
+      content: yaml 数组语法
+  - [meta, { name: bar , content: 方括号语法 }]
+---
+```
+渲染为：
+```html
+<head>
+  <meta name="foo" content="yaml 数组语法" />
+  <meta name="bar" content="方括号语法" />
+</head>
+```
+:::
+#### layout
+:::details
+类型： `string`  
+详情：  
+页面的布局。  
+布局是由主题提供的。如果你不指定该 Frontmatter ，则会使用默认布局。你应该参考主题自身的文档来了解其提供了哪些布局。  
+如果主题布局无法满足你的需求，你可以使用自定义布局组件。  
+示例：  
+在 .vuepress/client.ts 文件中注册一个布局组件：  
+```vue
+import { defineClientConfig } from '@vuepress/client'
+import CustomLayout from './CustomLayout.vue'
+
+export default defineClientConfig({
+  layouts: {
+    CustomLayout,
+  },
+})
+```
+在 Frontmatter 中设置自定义布局：
+
+```md
+---
+layout: CustomLayout
+---
+```
+:::
+
+
+___
+### 默认主题定制的Frontmeta配置
 #### 通用Frontmeta
 即每个页面都可以配置的项  
 ##### pageClass 
@@ -220,7 +291,7 @@ pageClass: custom-page-class
 ##### externalLinkIcon
 类型： `boolean`
 控制 externalLinkIcon插件是否在此页面中生效  
-
+___
 #### 首页专用
 ##### home
 类型： `boolean`  
@@ -289,7 +360,7 @@ features:
 类型： `boolean`  
 详情：  
 是否允许页脚中使用 HTML 。如果设置为 `true` ，那么 `footer` 会被作为 HTML 代码处理。
-
+___
 #### 普通页面
 以下配置的 `Frontmatter` 只会在普通页面中生效。
 
