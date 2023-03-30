@@ -1,17 +1,23 @@
 import { defineUserConfig } from "vuepress"
 import { defaultTheme } from "vuepress"
-import { searchPlugin } from "@vuepress/plugin-search"
+import { searchProPlugin } from "vuepress-plugin-search-pro"
 import path from "path"
 import { generateNavItems } from "../../src/utils/navbar"
 
 export default defineUserConfig({
   lang: "zh-CN",
-  head: [["link", { rel: "stylesheet", href: "/styles/index.css" }]],
+  // head:
   title: "Creat.Wu's Blog",
   description: "记不住就抄下来",
   plugins: [
-    searchPlugin({
-      // 配置项
+    // searchPlugin({
+    //   // 配置项
+    // }),
+    searchProPlugin({
+      // 配置选项
+      indexContent: true,
+      resultHistoryCount: 15,
+      delay: 800,
     }),
   ],
   theme: defaultTheme({
