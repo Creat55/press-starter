@@ -2,7 +2,6 @@
 sidebarDepth: 3
 ---
 # VuePress使用说明
-<!-- [[toc]] -->
 ## 安装
 ```bash
 git init
@@ -45,7 +44,7 @@ export default defineUserConfig({
 ```
 [详细配置说明](https://v2.vuepress.vuejs.org/zh/reference/config.html)
 
-## Markdown使用细节
+## VuePress自带的Markdown扩展
 ### 链接自动转换
 在你使用 Markdown 的 链接语法 时， VuePress 会为你进行一些转换。
 - 内部链接会被转换为 `<RouterLink>` 以便进行 SPA 导航。

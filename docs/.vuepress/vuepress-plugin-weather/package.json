@@ -1,0 +1,9 @@
+{
+  "name": "vuepress-plugin-weather",
+  "version": "0.0.1",
+  "description": "weather icon on the rightside of logo",
+  "main": "./src/index.js",
+  "author": "Creat.wu",
+  "license": "MIT",
+	"type": "module"
+}
