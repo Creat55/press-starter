@@ -8,7 +8,9 @@ html,
 body {
   width: 100%;
 }
-
+.language-javascript {
+  tab-size: 2 !important;
+}
 .navbar .site-name {
   color: var(--c-brand);
 }
