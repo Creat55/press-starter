@@ -1,11 +1,11 @@
 import { defineUserConfig } from "vuepress"
 import { defaultTheme } from "vuepress"
 import { searchProPlugin } from "vuepress-plugin-search-pro"
-import vuepressPluginAnchorRight from "./vuepress-plugin-anchor-right"
+// import vuepressPluginAnchorRight from "./vuepress-plugin-anchor-right"
 
 import path from "path"
 import { generateNavItems } from "../../src/utils/navbar"
-import { weatherPlugin } from "./vuepress-plugin-weather/src/index"
+// import { weatherPlugin } from "./vuepress-plugin-weather/src/index"
 
 export default defineUserConfig({
   lang: "zh-CN",
@@ -16,8 +16,8 @@ export default defineUserConfig({
     // searchPlugin({
     //   // 配置项
     // }),
-    vuepressPluginAnchorRight(),
-    weatherPlugin({}),
+    // vuepressPluginAnchorRight(),
+    // weatherPlugin({}),
     searchProPlugin({
       // 配置选项
       indexContent: true,
