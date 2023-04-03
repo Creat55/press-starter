@@ -64,7 +64,7 @@ Mustache语法"是一种模板引擎的语法，用于将数据和HTML模板结�
 双大括号标签会被替换为相应组件实例中 `msg` 属性的值。同时每次 `msg` 属性更改时它也会同步更新。
 
 ### Attribute绑定
-在
+
 :::tip HTML attributes
 
 HTML属性指的是在HTML标签中使用的特性，用于提供有关元素的额外信息。例如，在`<img>`标签中，可以使用`src`属性来指定图像文件的URL地址。
@@ -198,35 +198,243 @@ const objectOfAttrs = {
 :::
 ![img](https://cn.vuejs.org/assets/directive.69c37117.png)
 
-### 计算属性
 
-模板中的JS表达式虽然方便，但也只能用来做简单的操作。如果在模板中写太多逻辑，会让模板变得臃肿，难以维护。推荐使用计算属性来描述依赖响应式状态的复杂逻辑。`computed()` 方法期望接收一个 getter 函数，返回值为一个**计算属性 ref**。
+### Class 与 Style 绑定
+因此，Vue 专门为 class 和 style 的 v-bind 用法提供了特殊的功能增强。除了字符串外，表达式的值也可以是**对象**或**数组**。
+
+```html
+<div :class="{ active: isActive }"></div>
+<!-- 上面的语法表示 active 是否存在取决于数据属性 isActive 的真假值。-->
+```
+```html
+<div class="static" :class="{ active: isActive, 'text-danger': hasError }" ></div>
+<!-- 可以用obj处理多个class-->
+
+<!-- 也可以用数组来处理多个class-->
+<div :class="[{ active: isActive }, errorClass]"></div>
+<!-- errorClass 会一直存在，但 active 只会在 isActive 为真时才存在。>
+```
+
+绑定的对象并不一定需要写成内联字面量的形式，也可以直接绑定一个对象，也可以是计算属性：
 
 ```vue
-<script setup>
-import { reactive, computed } from 'vue'
-
-const author = reactive({
-  name: 'John Doe',
-  books: [
-    'Vue 2 - Advanced Guide',
-    'Vue 3 - Basic Guide',
-    'Vue 4 - The Mystery'
-  ]
-})
-
-// 一个计算属性 ref
-const publishedBooksMessage = computed(() => {
-  return author.books.length > 0 ? 'Yes' : 'No'
+<script>
+const classObject = reactive({
+  active: true,
+  'text-danger': false
 })
 </script>
 
 <template>
-  <p>Has published books:</p>
-  <span>{{ publishedBooksMessage }}</span>
+<div :class="classObject"></div>
 </template>
 ```
 
+------
+
+
+
+### 条件渲染 v-if
+
+`v-if` 指令用于条件性地渲染一块内容。这块内容只会在指令的表达式返回真值时才被渲染。
+
+#### template 上的 v-if
+因为 v-if 是一个指令，他必须依附于某个元素。但如果我们想要切换不止一个元素呢？在这种情况下我们可以在一个 `<template>` 元素上使用 v-if，这只是一个不可见的包装器元素，最后渲染的结果并不会包含这个 `<template>` 元素。
+
+```vue
+<template v-if="ok">
+  <h1>Title</h1>
+  <p>Paragraph 1</p>
+  <p>Paragraph 2</p>
+</template>
+```
+#### v-show
+另一个可以用来按条件显示一个元素的指令是 `v-show`。其用法基本一样：
+不同之处在于 `v-show` 会在 DOM 渲染中保留该元素；v-show 仅切换了该元素上名为 `display` 的 CSS 属性。
+**v-show 不支持在 `<template>` 元素上使用**，也不能和 `v-else` 搭配使用。
+
+总的来说，`v-if` 有更高的切换开销，而 `v-show` 有更高的初始渲染开销。
+
+------
+
+
+
+### 列表渲染 v-for
+
+我们可以使用 `v-for` 指令基于一个数组来渲染一个列表。`v-for` 指令的值需要使用 `item in items` 形式的特殊语法，其中 `items` 是源数据的数组，而 `item` 是迭代项的**别名**，`v-for` 也支持使用*可选*的第二个参数表示当前项的位置索引。：
+
+```vue
+<li v-for="(item,index) in items">
+  {{ item.message }}
+</li>
+```
+
+#### `v-for` 与对象
+
+你也可以使用 `v-for` 来遍历一个对象的所有属性。遍历的顺序会基于对该对象调用 `Object.keys()` 的返回值来决定。
+
+可以通过提供第二个参数表示属性名 (例如 key)，第三个参数表示位置索引：
+
+```vue
+<script>
+const myObject = reactive({
+  title: 'How to do lists in Vue',
+  author: 'Jane Doe',
+  publishedAt: '2016-04-10'
+})
+</script>
+<template>
+<ul>
+    <li v-for="(value, key, index) in myObject">
+      {{ index }}. {{ key }}: {{ value }}
+    </li>
+</ul>
+</template>
+```
+
+
+
+#### 在 `v-for` 里使用范围值
+
+`v-for` 可以直接接受一个整数值。在这种用例中，会将该模板基于 `1...n` 的取值范围重复多次。
+
+```vue
+<span v-for="n in 10">{{ n }}</span>
+```
+
+**注意此处 `n` 的初值是从 `1` 开始而非 `0`。**
+
+
+
+#### 通过 :key 管理状态
+
+Vue 默认按照“就地更新”的策略来更新通过 `v-for` 渲染的元素列表。当数据项的顺序改变时，Vue 不会随之移动 DOM 元素的顺序，而是就地更新每个元素，确保它们在原本指定的索引位置上渲染。
+
+默认模式是高效的，但**只适用于列表渲染输出的结果不依赖子组件状态或者临时 DOM 状态 (例如表单输入值) 的情况**。
+
+为了给 Vue 一个提示，以便它可以跟踪每个节点的标识，从而重用和重新排序现有的元素，你需要为每个元素对应的块提供一个唯一的 `key` attribute：
+
+```vue
+<template v-for="todo in todos" :key="todo.name">
+  <li>{{ todo.name }}</li>
+</template>
+```
+
+
+
+推荐在任何可行的时候为 `v-for` 提供一个 `key` attribute，除非所迭代的 DOM 内容非常简单 (例如：不包含组件或有状态的 DOM 元素)，或者你想有意采用默认行为来提高性能。在没有 key 的情况下，Vue 只能通过节点的索引进行匹配，而不能准确地找到旧节点中与新节点相对应的位置。这可能会导致一些不必要的 DOM 操作，影响性能。
+
+`key` 绑定的值期望是一个基础类型的值，例如**字符串**或**number** 类型。**不要用对象**作为 `v-for` 的 key。关于 `key` attribute 的更多用途细节，请参阅 [`key` API 文档](https://cn.vuejs.org/api/built-in-special-attributes.html#key)。
+
+### 事件处理 v-on
+
+我们可以使用 `v-on` 指令 (简写为 `@`) 来监听 DOM 事件，并在事件触发时执行对应的 JavaScript。用法：`v-on:click="handler"` 或 `@click="handler"`。
+
+#### 调用方法
+除了直接绑定方法名，你还可以在内联事件处理器中调用方法。这允许我们向方法传入自定义参数以代替原生事件：
+
+```vue
+<button @click="say('hello')">Say hello</button>
+<button @click="say('bye')">Say bye</button>
+```
+
+#### 访问事件参数
+
+有时我们需要在内联事件处理器中访问原生 DOM 事件。你可以向该处理器方法传入一个特殊的 `$event` 变量，或者使用内联箭头函数：
+
+```vue
+<template>
+<!-- 使用特殊的 $event 变量 -->
+<button @click="warn('Form cannot be submitted yet.', $event)">
+  Submit
+</button>
+
+<!-- 使用内联箭头函数 -->
+<button @click="(event) => warn('Form cannot be submitted yet.', event)">
+  Submit
+</button>
+</template>
+
+<script>
+function warn(message, event) {
+  // 这里可以访问原生事件
+  if (event) {
+    event.preventDefault()
+  }
+  alert(message)
+}
+</script>
+```
+
+#### 事件修饰符
+
+Vue 为 `v-on` 提供了**事件修饰符**。修饰符是用 `.` 表示的指令后缀，包含以下这些：
+
+- `.stop`
+- `.prevent`
+- `.self`
+- `.capture`
+- `.once`
+- `.passive`
+
+#### 按键修饰符
+在监听键盘事件时，我们经常需要检查特定的按键。Vue 允许在 v-on 或 @ 监听按键事件时添加按键修饰符。
+[详细](https://cn.vuejs.org/guide/essentials/event-handling.html#key-modifiers)
+
+
+
+### 双向绑定 v-model
+
+使用v-model双向绑定数据
+
+```vue
+<input v-model="text">
+```
+
+#### 修饰符
+
+##### .lazy
+
+默认情况下，`v-model` 会在每次 `input` 事件后更新数据 (IME 拼字阶段的状态例外)。你可以添加 `lazy` 修饰符来改为在每次 `change` 事件后更新数据
+
+##### .number
+
+如果你想让用户输入自动转换为数字，你可以在 `v-model` 后添加 `.number` 修饰符来管理输入
+
+如果该值无法被 `parseFloat()` 处理，那么将返回原始值。
+
+`number` 修饰符会在输入框有 `type="number"` 时自动启用。
+
+##### .trim
+
+如果你想要默认自动去除用户输入内容中两端的空格，你可以在 `v-model` 后添加 `.trim` 修饰符
+
+
+
+### DOM元素的直接引用 特殊的ref
+
+在某些情况下，我们仍然需要直接访问底层 DOM 元素。要实现这一点，我们可以使用特殊的 `ref` attribute：
+
+```vue
+<script setup>
+import { ref, onMounted } from 'vue'
+
+// 声明一个 ref 来存放该元素的引用
+// 必须和模板里的 ref 同名
+const input1 = ref(null)
+
+onMounted(() => {
+  input1.value.focus()	// 使用setup语法糖input1会自动获得template中同名的引用。
+})
+</script>
+
+<template>
+  <input ref="input1" />
+</template>
+```
+
+
+------
 
 
 
@@ -320,7 +528,7 @@ function increment() {
 
 
 
-#### 在ts中为响应式对象标注类型
+##### 在ts中为响应式对象标注类型
 
 - 要显式地标注一个 `reactive` 变量的类型，我们可以使用接口：
 
@@ -344,7 +552,7 @@ const book = reactive<Book>({title: 'Vue 3 指引'})
 当我们访问响应式对象的属性时，实际上是在访问 `Ref` 对象的 `.value` 属性，而不是实际的属性值。在实际开发中，有可能会对响应式对象进行较深层次的属性访问，需要使用多次 `.value` 属性进行解包，例如：
 
 ```
-📎const obj = reactive({
+const obj = reactive({
   a: {
     b: {
       c: 1,
@@ -376,4 +584,160 @@ const value = obj.a.b.c.value;
   year.value = 2020 // 成功！
   ```
 
-  
+#### 计算属性 computed
+
+模板中的JS表达式虽然方便，但也只能用来做简单的操作。如果在模板中写太多逻辑，会让模板变得臃肿，难以维护。推荐使用计算属性来描述依赖响应式状态的复杂逻辑。`computed()` 方法期望接收一个 getter 函数，返回值为一个**计算属性 ref**。和其他一般的 ref 类似，你可以通过 `publishedBooksMessage.value` 访问计算结果。
+
+```vue
+<script setup>
+import { reactive, computed } from 'vue'
+
+const author = reactive({
+  name: 'John Doe',
+  books: [
+    'Vue 2 - Advanced Guide',
+    'Vue 3 - Basic Guide',
+    'Vue 4 - The Mystery'
+  ]
+})
+
+// 一个计算属性 ref
+const publishedBooksMessage = computed(() => {
+  return author.books.length > 0 ? 'Yes' : 'No'
+})
+</script>
+
+<template>
+  <p>Has published books:</p>
+  <span>{{ publishedBooksMessage }}</span>
+</template>
+```
+
+##### 在ts中为计算属性标注类型
+
+`computed()` 会自动从其计算函数的返回值上推导出类型：
+
+```typescript
+import { ref, computed } from 'vue'
+
+const count = ref(0)
+
+// 推导得到的类型：ComputedRef<number>
+const double = computed(() => count.value * 2)
+
+// => TS Error: Property 'split' does not exist on type 'number'
+const result = double.value.split('')
+```
+
+你还可以通过泛型参数显式指定类型：
+
+```typescript
+const double = computed<number>(() => {
+  // 若返回值不是 number 类型则会报错
+})
+```
+
+##### 计算属性 对比 普通函数方法
+
+函数可以获得和计算属性相同的结果，不同之处在于计算属性值会基于其**响应式依赖**被**缓存**。一个计算属性仅会在其响应式依赖**更新**时才重新计算。
+
+为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 `list`，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 `list`。没有缓存的话，我们会重复执行非常多次 `list` 的 getter，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。
+
+#### 侦听器 watch 
+
+计算属性允许我们声明性地计算衍生值。_然而在有些情况下，我们需要在状态变化时执行一些“副作用”：例如更改 DOM，或是根据异步操作的结果去修改另一处的状态。_(计算属性只能return一个值，而无法在函数中操作dom等。)
+
+在组合式 API 中，我们可以使用`watch` 函数在每次响应式状态发生变化时触发回调函数：
+
+```ts
+<!-- question:监听的对象  newquestion:变更后的值   oldquestion：变更前的值 
+<!--{ deep 如果不设置deep属性或设置为false，那么只会监听对象本身的变化，而不会递归监听对象内部值的变化。}->
+<!--{ immediate 在创建侦听器时，立即执行一遍回调函数 }-->
+<!--{ flush:'post' 使侦听器回调中能访问被 Vue 更新之后的 DOM}
+watch(question, async (newQuestion, oldQuestion) => {
+  if (newQuestion.indexOf('?') > -1) {
+    answer.value = 'Thinking...'
+    try {
+      const res = await fetch('https://yesno.wtf/api')
+      answer.value = (await res.json()).answer
+    } catch (error) {
+      answer.value = 'Error! Could not reach the API. ' + error
+    }
+  }
+},{ deep: true ,immediate: true,  flush: 'post'}
+)
+```
+
+`question`:watch 的第一个参数可以是不同形式的“数据源”：它可以是一个 ref (包括计算属性)、一个响应式对象、一个 getter 函数、或多个数据源组成的数组：
+
+```ts
+const x = ref(0)
+const y = ref(0)
+
+// 单个 ref
+watch(x, (newX) => {
+  console.log(`x is ${newX}`)
+})
+
+// getter 函数
+watch(
+  () => x.value + y.value,
+  (sum) => {
+    console.log(`sum of x + y is: ${sum}`)
+  }
+)
+
+// 多个来源组成的数组
+watch([x, () => y.value], ([newX, newY]) => {
+  console.log(`x is ${newX} and y is ${newY}`)
+})
+```
+
+##### watchEffect()
+
+`watchEffect()` 允许我们自动跟踪回调的响应式依赖。
+
+```ts
+const todoId = ref(1)
+const data = ref(null)
+
+watch(todoId, async () => {
+  const response = await fetch(
+    `https://jsonplaceholder.typicode.com/todos/${todoId.value}`
+  )
+  data.value = await response.json()
+}, { immediate: true })
+
+<!-- 对todoID既要进行监听，又要在回调中用到这个响应式的变量值，可以直接使用watchEffect()-->
+watchEffect(async () => {
+  const response = await fetch(
+    `https://jsonplaceholder.typicode.com/todos/${todoId.value}`
+  )
+  data.value = await response.json()
+})
+<!--每当 todoId.value 变化时，回调会再次执行。有了 watchEffect()，我们不再需要明确传递 todoId 作为源值。-->
+```
+
+watchEffect的回调函数会在初始化时立即执行，并自动追踪其所依赖的所有状态，比较常用于监听多个变量时，可以将多个变量放在watchEffect中，进行全局依赖追踪。不再需要指定 `immediate: true`
+
+##### 停止侦听器
+
+在大多数情况下，你无需关心怎么停止一个侦听器。
+
+------
+
+### 生命周期
+
+![生命周期](https://img-blog.csdnimg.cn/20200815191941397.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FxXzQ0NzUyOTc4,size_16,color_FFFFFF,t_70)
+
+- 创建期间生命周期方法      beforeCreate:     created:      beforeMount      mounted
+
+- 运行期间生命周期方法      beforeUpdate      updated
+
+- 销毁期间的生命周期方法    beforeDestroy     destroyed
+
+最常用的是 [`onMounted`](https://cn.vuejs.org/api/composition-api-lifecycle.html#onmounted)、[`onUpdated`](https://cn.vuejs.org/api/composition-api-lifecycle.html#onupdated) 和 [`onUnmounted`](https://cn.vuejs.org/api/composition-api-lifecycle.html#onunmounted)
+
+
+
+## 在
