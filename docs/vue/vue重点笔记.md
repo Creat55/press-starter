@@ -198,14 +198,15 @@ const objectOfAttrs = {
 :::
 ![img](https://cn.vuejs.org/assets/directive.69c37117.png)
 
-
 ### Class 与 Style 绑定
+
 因此，Vue 专门为 class 和 style 的 v-bind 用法提供了特殊的功能增强。除了字符串外，表达式的值也可以是**对象**或**数组**。
 
 ```html
 <div :class="{ active: isActive }"></div>
 <!-- 上面的语法表示 active 是否存在取决于数据属性 isActive 的真假值。-->
 ```
+
 ```html
 <div class="static" :class="{ active: isActive, 'text-danger': hasError }" ></div>
 <!-- 可以用obj处理多个class-->
@@ -378,10 +379,9 @@ Vue 为 `v-on` 提供了**事件修饰符**。修饰符是用 `.` 表示的指�
 - `.passive`
 
 #### 按键修饰符
+
 在监听键盘事件时，我们经常需要检查特定的按键。Vue 允许在 v-on 或 @ 监听按键事件时添加按键修饰符。
 [详细](https://cn.vuejs.org/guide/essentials/event-handling.html#key-modifiers)
-
-
 
 ### 双向绑定 v-model
 
@@ -409,8 +409,6 @@ Vue 为 `v-on` 提供了**事件修饰符**。修饰符是用 `.` 表示的指�
 
 如果你想要默认自动去除用户输入内容中两端的空格，你可以在 `v-model` 后添加 `.trim` 修饰符
 
-
-
 ### DOM元素的直接引用 特殊的ref
 
 在某些情况下，我们仍然需要直接访问底层 DOM 元素。要实现这一点，我们可以使用特殊的 `ref` attribute：
@@ -424,7 +422,7 @@ import { ref, onMounted } from 'vue'
 const input1 = ref(null)
 
 onMounted(() => {
-  input1.value.focus()	// 使用setup语法糖input1会自动获得template中同名的引用。
+  input1.value.focus() // 使用setup语法糖input1会自动获得template中同名的引用。
 })
 </script>
 
@@ -433,10 +431,41 @@ onMounted(() => {
 </template>
 ```
 
+如果你需要侦听一个模板引用 ref 的变化，确保考虑到其值为 `null` 的情况：
+
+```js
+watchEffect(() => {
+  if (input.value) {
+    input.value.focus()
+  } else {
+    // 此时还未挂载，或此元素已经被卸载（例如通过 v-if 控制）
+  }
+})
+```
+
+#### 在ts中为模板ref标注类型
+
+模板引用需要通过一个显式指定的泛型参数和一个初始值 `null` 来创建：
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
+const el = ref<HTMLInputElement | null>(null)
+
+onMounted(() => {
+  el.value?.focus()
+})
+</script>
+
+<template>
+  <input ref="el" />
+</template>
+```
+
+注意为了严格的类型安全，有必要在访问 `el.value` 时使用可选链或类型守卫。这是因为直到组件被挂载前，这个 ref 的值都是初始的 `null`，并且在由于 `v-if` 的行为将引用的元素卸载时也可以被设置为 `null`。
 
 ------
-
-
 
 ## script中的要点
 
@@ -469,6 +498,7 @@ export default {
 - 组合式
 :::details
 Vue 3 中新增了组合式 API，它是一种更为灵活的 API 设计，能够更好地支持大型组件的开发。组合式 API 将一个组件拆分为若干个功能单一的模块，并提供一些函数来处理组件中的各种配置，包括 props、data、计算方法和生命周期钩子等。通过这种方式可以更好地重用和封装某些逻辑的代码，使组件代码更具可读性和可维护性。
+
 ```js
 import { reactive } from 'vue'
 
@@ -488,6 +518,7 @@ export default {
   }
 }
 ```
+
 :::
 
 - 组合式+setup语法糖
@@ -508,6 +539,7 @@ function increment() {
 }
 </script>
 ```
+
 :::
 
 ### 响应式基础
@@ -516,6 +548,7 @@ function increment() {
 - [JavaScript Proxy](https://es6.ruanyifeng.com/#docs/proxy) 是一个内置的 JavaScript 对象，允许你在访问另一个对象之前拦截并定制这个操作。可以通过 Proxy 来实现响应式对象的功能，因为它可以拦截对响应式对象属性的访问和修改操作，并对其进行处理。
 
 #### 用 reactive / ref 声明响应式对象
+
 - 我们可以使用 reactive() 函数创建一个响应式对象或数组
 - 也使用ref()函数将任何值类型创建为响应式对象
 对比：
@@ -523,10 +556,6 @@ function increment() {
 - ref()的缺点：ref是vue包装了普通数据类型的特殊对象，需要通过.value来获取它的值 。
 - 当 ref 在模板中作为顶层属性被访问时，它们会被自动“解包”，所以不需要使用 .value。
 - **同时，当值为对象类型时，ref()会用 reactive() 自动转换它的 .value。**
-
-
-
-
 
 ##### 在ts中为响应式对象标注类型
 
@@ -545,13 +574,13 @@ const book: Book = reactive({ title: 'Vue 3 指引' })
 const book = reactive<Book>({title: 'Vue 3 指引'})
 ```
 
-:::details 
+:::details
 
 在 Vue.js 3 中，我们可以使用 `reactive` 函数将一个 JavaScript 对象转换为响应式对象。`reactive` 返回的对象中，其所有响应式属性都被包装在了一个或多个 `Ref` 对象中，以便在属性被修改时触发相应的响应式更新。`Ref` 对象提供了 `.value` 属性，用于获取或修改包装值的值。
 
 当我们访问响应式对象的属性时，实际上是在访问 `Ref` 对象的 `.value` 属性，而不是实际的属性值。在实际开发中，有可能会对响应式对象进行较深层次的属性访问，需要使用多次 `.value` 属性进行解包，例如：
 
-```
+``` js
 const obj = reactive({
   a: {
     b: {
@@ -564,6 +593,7 @@ const obj = reactive({
 const value = obj.a.b.c.value;
 这种情况下，就会有一个潜在的风险：解包后的值类型可能与我们指定的泛型类型不一致。例如，在上面的代码中，`value` 的类型是 `number`，而不是 `Ref<number>`，这样就可能在编写代码时出现类型推断失效的问题。
 ```
+
 因此，在使用 `reactive` 函数时，不建议使用泛型参数来为对象指定类型。尽管可以通过在代码中使用类型守卫（Type Guard）等技术来进行类型推断，但这种方式可能会使代码变得更为复杂，且不如避免出现类型推断错误来得简单明了。
 :::
 
@@ -643,9 +673,9 @@ const double = computed<number>(() => {
 
 为什么需要缓存呢？想象一下我们有一个非常耗性能的计算属性 `list`，需要循环一个巨大的数组并做许多计算逻辑，并且可能也有其他计算属性依赖于 `list`。没有缓存的话，我们会重复执行非常多次 `list` 的 getter，然而这实际上没有必要！如果你确定不需要缓存，那么也可以使用方法调用。
 
-#### 侦听器 watch 
+#### 侦听器 watch
 
-计算属性允许我们声明性地计算衍生值。_然而在有些情况下，我们需要在状态变化时执行一些“副作用”：例如更改 DOM，或是根据异步操作的结果去修改另一处的状态。_(计算属性只能return一个值，而无法在函数中操作dom等。)
+计算属性允许我们声明性地计算衍生值。*然而在有些情况下，我们需要在状态变化时执行一些“副作用”：例如更改 DOM，或是根据异步操作的结果去修改另一处的状态。*(计算属性只能return一个值，而无法在函数中操作dom等。)
 
 在组合式 API 中，我们可以使用`watch` 函数在每次响应式状态发生变化时触发回调函数：
 
@@ -738,6 +768,66 @@ watchEffect的回调函数会在初始化时立即执行，并自动追踪其所
 
 最常用的是 [`onMounted`](https://cn.vuejs.org/api/composition-api-lifecycle.html#onmounted)、[`onUpdated`](https://cn.vuejs.org/api/composition-api-lifecycle.html#onupdated) 和 [`onUnmounted`](https://cn.vuejs.org/api/composition-api-lifecycle.html#onunmounted)
 
+## 组件
 
+组件允许我们将 UI 划分为独立的、可重用的部分，并且可以对每个部分进行单独的思考。在实际应用中，组件常常被组织成层层嵌套的树状结构：
 
-## 在
+![img](https://cn.vuejs.org/assets/components.7fbb3771.png)
+
+### 定义一个组件
+
+当使用构建步骤时，我们一般会将 Vue 组件定义在一个单独的 `.vue` 文件中，这被叫做[单文件组件](https://cn.vuejs.org/guide/scaling-up/sfc.html) (简称 SFC)
+
+组件可以被重用任意多次，但每一个组件都维护着自己的状态。这是因为每当你使用一个组件，就创建了一个新的**实例**。
+
+### 使用一个组件
+
+#### 局部注册组件
+
+要使用一个子组件，我们需要在父组件中导入它。假设我们把计数器组件放在了一个叫做 `ButtonCounter.vue` 的文件中，这个组件将会以**默认导出**的形式被暴露给外部。
+
+```vue
+<!--父组件中导入子组件-->
+<script setup>
+import ButtonCounter from './ButtonCounter.vue'
+</script>
+```
+
+#### 全局注册组件
+
+当然，你也可以全局地注册一个组件，使得它在当前应用中的任何组件上都可以使用，而不需要额外再导入。
+
+我们可以使用 Vue 应用实例的 app.component() 方法，让组件在当前 Vue 应用中全局可用。
+
+```js
+import { createApp } from 'vue'
+
+const app = createApp({})
+
+app.component('ComponentA', ComponentA)
+  .component('ComponentB', ComponentB)
+  .component('ComponentC', ComponentC)
+```
+
+```js
+<!-- 这在当前应用的任意组件中都可用 -->
+<ComponentA/>
+<ComponentB/>
+<ComponentC/>
+```
+
+#### 局部注册VS全局注册
+
+全局注册虽然很方便，但有以下几个问题：
+
+全局注册，但并没有被使用的组件无法在生产打包时被自动移除 (也叫“tree-shaking”)。如果你全局注册了一个组件，即使它并没有被实际使用，它仍然会出现在打包后的 JS 文件中。
+
+全局注册在大型项目中使项目的依赖关系变得不那么明确。在父组件中使用子组件时，不太容易定位子组件的实现。和使用过多的全局变量一样，这可能会影响应用长期的可维护性。
+
+相比之下，局部注册的组件需要在使用它的父组件中显式导入，并且只能在该父组件中使用。它的优点是使组件之间的依赖关系更加明确，并且对 tree-shaking 更加友好。
+
+#### 组件名格式
+
+都使用 PascalCase （大驼峰命名）作为组件名的注册格式
+
+### 传递props
