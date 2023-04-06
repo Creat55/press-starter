@@ -671,6 +671,15 @@
     "@vuepress/utils" "2.0.0-beta.61"
     execa "^7.0.0"
 
+"@vuepress/plugin-git@^2.0.0-beta.61":
+  version "2.0.0-beta.61"
+  resolved "https://registry.yarnpkg.com/@vuepress/plugin-git/-/plugin-git-2.0.0-beta.61.tgz#4c7827a8f964b55fe594cd5f4f79509e0264bc5d"
+  integrity sha512-ozoxZ+x57yGiHDs5tXJvbyoZTiYpfb7QQaS5mgxn0+XZqfg7/cZnT7DmJtxVqk+VFmz73WHgN+4pGRjkuTOLqQ==
+  dependencies:
+    "@vuepress/core" "2.0.0-beta.61"
+    "@vuepress/utils" "2.0.0-beta.61"
+    execa "^7.0.0"
+
 "@vuepress/plugin-medium-zoom@2.0.0-beta.61":
   version "2.0.0-beta.61"
   resolved "https://registry.npmjs.org/@vuepress/plugin-medium-zoom/-/plugin-medium-zoom-2.0.0-beta.61.tgz"

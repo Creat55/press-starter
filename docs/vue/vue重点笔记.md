@@ -831,3 +831,382 @@ app.component('ComponentA', ComponentA)
 都使用 PascalCase （大驼峰命名）作为组件名的注册格式
 
 ### 传递props
+
+Props 是一种特别的 attributes，一个组件需要显式声明它所接受的 props，这样 Vue 才能知道外部传入的哪些是 props，哪些是透传 attribute。
+
+在使用 `<script setup>` 的单文件组件中，props 可以使用 `defineProps()` 宏来声明：
+
+```vue
+<!-- Child Components -->
+<script setup>
+const props = defineProps(['foo'])
+
+console.log(props.foo)
+</script>
+```
+
+除了使用字符串数组来声明 prop 外，还可以使用对象的形式：
+
+```js
+defineProps({
+  title: String,
+  likes: Number
+})
+```
+
+#### Prop 校验
+Vue 组件可以更细致地声明对传入的 props 的校验要求。比如我们上面已经看到过的类型声明，如果传入的值不满足类型要求，Vue 会在浏览器控制台中抛出警告来提醒使用者。这在开发给其他开发者使用的组件时非常有用。
+
+要声明对 props 的校验，你可以向 defineProps() 宏提供一个带有 props 校验选项的对象，例如：
+
+```js
+defineProps({
+  // 基础类型检查
+  // （给出 `null` 和 `undefined` 值则会跳过任何类型检查）
+  propA: Number,
+  // 多种可能的类型
+  propB: [String, Number],
+  // 必传，且为 String 类型
+  propC: {
+    type: String,
+    required: true
+  },
+  // Number 类型的默认值
+  propD: {
+    type: Number,
+    default: 100
+  },
+  // 对象类型的默认值
+  propE: {
+    type: Object,
+    // 对象或数组的默认值
+    // 必须从一个工厂函数返回。
+    // 该函数接收组件所接收到的原始 prop 作为参数。
+    default(rawProps) {
+      return { message: 'hello' }
+    }
+  },
+  // 自定义类型校验函数
+  propF: {
+    validator(value) {
+      // The value must match one of these strings
+      return ['success', 'warning', 'danger'].includes(value)
+    }
+  },
+  // 函数类型的默认值
+  propG: {
+    type: Function,
+    // 不像对象或数组的默认，这不是一个
+    // 工厂函数。这会是一个用来作为默认值的函数
+    default() {
+      return 'Default function'
+    }
+  }
+
+```
+
+#### 在ts中声明props并标注类型
+
+如果你正在搭配 TypeScript 使用 `<script setup>`，也可以使用类型标注来声明 props：
+
+```vue
+<script setup lang="ts">
+defineProps<{
+  title?: string
+  likes?: number
+}>()
+</script>
+```
+
+##### 复杂的 prop 类型
+
+通过基于类型的声明，一个 prop 可以像使用其他任何类型一样使用一个复杂类型：
+
+```vue
+<script setup lang="ts">
+interface Book {
+  title: string
+  author: string
+  year: number
+}
+
+const props = defineProps<{
+  book: Book
+}>()
+</script>
+```
+
+#### Props 名字格式
+如果一个 prop 的名字很长，应使用 camelCase 形式，因为它们是合法的 JavaScript 标识符，可以直接在模板的表达式中使用，也可以避免在作为属性 key 名时必须加上引号。
+
+#### props 传递不同的值类型
+任何类型的值都可以作为 props 的值被传递。
+
+###### Vue 中，如何将函数作为 props 传递给组件
+
+父子组件之间尽量避免直接修改对方的 props 或 data，因为这会破坏响应式数据的流动，导致不可预知的行为。因此，Vue 鼓励使用事件来实现父子组件之间的通信。
+
+[函数](https://blog.csdn.net/qq449245884/article/details/106066381)
+
+#### 使用没有参数的 v-bind 传入一个对象绑定多个 prop
+
+```vue
+<script>
+const post = {
+  id: 1,
+  title: 'My Journey with Vue'
+}
+</script>
+<template>
+<BlogPost v-bind="post" />
+</template>
+```
+
+等价于：
+
+```vue
+<BlogPost :id="post.id" :title="post.title" />
+```
+
+#### 单向数据流
+
+所有的 props 都遵循着**单向绑定**原则，props 因父组件的更新而变化，自然地将新的状态向下流往子组件，而不会逆向传递。这避免了子组件意外修改父组件的状态的情况，不然应用的数据流将很容易变得混乱而难以理解。
+
+
+
+### 监听事件
+
+子组件与父组件交互时需要用到监听事件。
+
+父组件可以通过 `v-on` 或 `@` 来选择性地监听子组件上抛的事件，就像监听原生 DOM 事件那样：
+
+
+```vue
+<script>
+const posts = ref([
+  /* ... */
+])
+
+const postFontSize = ref(1)
+</script>
+
+<template>
+<div :style="{ fontSize: postFontSize + 'em' }">
+  <BlogPost  ...  @enlarge-text="postFontSize += 0.1" />
+</div>
+</template>
+```
+
+子组件可以通过调用内置的 [**`$emit`** 方法](https://cn.vuejs.org/api/component-instance.html#emit)，通过传入事件名称来抛出一个事件：
+
+```vue
+<!-- BlogPost.vue, 省略了 <script> -->
+<template>
+  <div class="blog-post">
+    <h4>{{ title }}</h4>
+    <button @click="$emit('enlarge-text')">Enlarge text</button>
+  </div>
+</template>
+```
+
+在`<script setup>`中，更常用的，我们可以通过 [`defineEmits`](https://cn.vuejs.org/api/sfc-script-setup.html#defineprops-defineemits) 宏来声明需要抛出的事件：
+
+```vue
+<!-- BlogPost.vue -->
+<script setup>
+defineProps(['title'])
+defineEmits(['enlarge-text'])
+</script>
+```
+
+它可以被用于在组件的 `<script setup>` 中抛出事件，因为此处无法直接访问 `$emit`：
+
+```vue
+<script setup>
+const emit = defineEmits(['enlarge-text'])
+
+emit('enlarge-text')
+</script>
+```
+
+#### 带参数的事件
+有时候我们会需要在触发事件时附带一个特定的值。举例来说，我们想要 `<BlogPost>` 组件来管理文本会缩放得多大。在这个场景下，我们可以给 $emit 提供一个额外的参数：
+
+```vue
+<button @click="$emit('increaseBy', 1)">
+  Increase by 1
+</button>
+```
+
+
+然后我们在父组件中监听事件，此函数会接收到事件附带的参数：
+
+```vue {2}
+<template>
+<MyButton @increase-by="increaseCount" />
+</template>
+
+<script>
+function increaseCount(n) {
+  count.value += n
+}
+</script>
+```
+
+#### 组件名字格式
+
+组件与 prop 一样，事件的名字也提供了自动的格式转换。注意这里我们触发了一个以 camelCase 形式命名的事件，但在父组件中可以使用 kebab-case 形式来监听。与 [prop 大小写格式](https://cn.vuejs.org/guide/components/props.html#prop-name-casing)一样，在模板中我们也推荐使用 kebab-case 形式来编写监听器。
+
+#### 事件声明是可选的
+
+尽管事件声明是可选的，我们还是推荐你完整地声明所有要触发的事件，以此在代码中作为文档记录组件的用法。同时，事件声明能让 Vue 更好地将事件和[透传 attribute](https://cn.vuejs.org/guide/components/attrs.html#v-on-listener-inheritance) 作出区分，从而避免一些由第三方代码触发的自定义 DOM 事件所导致的边界情况。
+
+### 插槽
+
+一些情况下我们会希望能和 HTML 元素一样向组件中传递内容：
+
+```vue
+<AlertBox>
+  Something bad happened.
+</AlertBox>
+```
+
+我们期望能渲染成这样：
+
+:::warning
+
+Something bad happened.
+
+:::
+
+
+
+这可以通过 Vue 的自定义 `<slot>` 元素来实现：
+
+在子组件中使用 `<slot>` 作为一个占位符，父组件传递进来的内容就会渲染在这里。
+
+```vue {4}
+<template>
+  <div class="alert-box">
+    <strong>This is an Error for Demo Purposes</strong>
+    <slot />
+  </div>
+</template>
+
+<style scoped>
+.alert-box {
+  /* ... */
+}
+</style>
+```
+
+`<slot>` 元素是一个**插槽出口** (slot outlet)，标示了父元素提供的**插槽内容** (slot content) 将在哪里被渲染。
+
+![img](https://cn.vuejs.org/assets/slots.dbdaf1e8.png)
+
+插槽内容可以是任意合法的模板内容，不局限于文本。例如我们可以传入多个元素，甚至是组件
+
+```vue {3,4}
+<!--parent.vue-->
+<FancyButton>
+  <span style="color:red">Click me!</span>
+  <AwesomeIcon name="plus" />
+</FancyButton>
+```
+
+#### 默认内容
+
+在外部没有提供任何内容的情况下，可以为插槽指定默认内容。
+
+```vue {3}
+<button type="submit">
+  <slot>
+    Submit <!-- 默认内容 -->
+  </slot>
+</button>
+```
+
+
+
+#### 具名插槽
+有时在一个组件中包含多个插槽出口是很有用的。`<slot>` 元素可以有一个特殊的 attribute `name`，用来给各个插槽分配唯一的 ID，以确定每一处要渲染的内容：
+```vue {3,6,9}
+<div class="container">
+  <header>
+    <slot name="header"></slot>
+  </header>
+  <main>
+    <slot></slot>
+  </main>
+  <footer>
+    <slot name="footer"></slot>
+  </footer>
+</div>
+```
+
+这类带 `name` 的插槽被称为具名插槽 (named slots)。没有提供 `name` 的 `<slot>` 出口会隐式地命名为“default”。
+
+要为具名插槽传入内容，我们需要使用一个含 `v-slot` 指令的 `<template>` 元素，并将目标插槽的名字传给该指令：
+
+```vue
+<BaseLayout>
+  <template v-slot:header>
+    <!-- header 插槽的内容放这里 -->
+  </template>
+</BaseLayout>
+```
+
+`v-slot` 有对应的简写 `#`，因此 `<template v-slot:header>` 可以简写为 `<template #header>`。其意思就是“将这部分模板片段传入子组件的 header 插槽中”。
+
+#### 插槽访问子组件中的数据
+
+在某些场景下插槽的内容可能想要同时使用父组件域内和子组件域内的数据。要做到这一点，我们需要一种方法来让子组件在渲染时将一部分数据提供给插槽。
+
+我们也确实有办法这么做！可以像对组件传递 props 那样，向一个插槽的出口上传递 attributes：
+
+```vue {3}
+<!-- <MyComponent> 的模板 -->
+<div>
+  <slot :text="greetingMessage" :count="1"></slot>
+</div>
+```
+
+### 组件v-model
+
+当父组件需要把值传给子组件时，可以使用v-bind传入props。但是如果要接收子组件对值的修改，就得考虑双向绑定(v-model)了
+
+所需操作：
+
+```vue
+<!--父组件：v-model：传入绑定的值-->
+<template>
+	<son-component v-model="val"/>
+</template>
+
+<script setup>
+	import sonComponent from "./sonComponent.vue"
+    const val = ref('')
+</script>
+```
+
+```vue
+<!--子组件-->
+<script setup>
+	//通过props接收
+    const props = defineProps({
+        modelValue:String		// 注意：父组件通过v-model传入的值在子组件中默认由modelValue接收
+    })
+    
+    const handelInput = (e)=>{
+        e.target.value  // 通过.target.value 获取input内的值
+    }
+</script>
+
+<template>
+	<div>
+        // 这里通过input举例
+        <input :value="modelValue" @input="handleInput">
+    </div>
+</template>
+```
+
