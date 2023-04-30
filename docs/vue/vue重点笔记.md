@@ -1196,9 +1196,14 @@ Something bad happened.
     const props = defineProps({
         modelValue:String		// 注意：父组件通过v-model传入的值在子组件中默认由modelValue接收
     })
+    // 通过emits暴露
+    const emit = defineEmits([
+        'update:modelValue'		// 注意：父组件通过update:modelValue接收子组件暴露的方法
+    ])
+    
     
     const handelInput = (e)=>{
-        e.target.value  // 通过.target.value 获取input内的值
+        emit('update:modelValue',e.target.value)  // 通过.target.value 获取input内的值
     }
 </script>
 
@@ -1210,3 +1215,107 @@ Something bad happened.
 </template>
 ```
 
+
+
+#### 修改默认的prop `modelValue` 
+
+默认情况下，`v-model` 在组件上都是使用 `modelValue` 作为 prop，并以 `update:modelValue` 作为对应的事件。我们可以通过给 `v-model` 指定一个参数来更改这些名字：
+
+```vue
+<MyComponent v-model:title="bookTitle" />
+```
+
+在这个例子中，子组件应声明一个 `title` prop，并通过触发 `update:title` 事件更新父组件值：
+
+```vue {3,4}
+<!-- MyComponent.vue -->
+<script setup>
+defineProps(['title'])
+defineEmits(['update:title'])
+</script>
+
+<template>
+  <input
+    type="text"
+    :value="title"
+    @input="$emit('update:title', $event.target.value)"
+  />
+</template>
+```
+
+#### 多个 `v-model` 绑定
+
+利用刚才在 v-model `props`小节中学到的指定参数与事件名的技巧，我们可以在单个组件实例上创建多个 `v-model` 双向绑定。
+
+```vue
+<!-- 父组件-->
+<UserName
+  v-model:first-name="first"
+  v-model:last-name="last"
+/>
+```
+
+
+
+```vue {4,5,8}
+<!-- 子组件 -->
+<script setup>
+defineProps({
+  firstName: String,
+  lastName: String
+})
+
+defineEmits(['update:firstName', 'update:lastName'])
+</script>
+```
+
+
+
+### 透传Attributes
+
+“透传 attribute”指的是传递给一个组件，却没有被该组件声明为 [props](https://cn.vuejs.org/guide/components/props.html) 或 [emits](https://cn.vuejs.org/guide/components/events.html#defining-custom-events) 的 attribute 或者 `v-on` 事件监听器。最常见的例子就是 `class`、`style` 和 `id`。
+
+**当一个组件以单个元素为根作渲染时，透传的 attribute 会自动被添加到根元素上。举例来说，假如我们有一个 `<MyButton>` 组件，它的模板长这样：**
+
+#### 禁用 Attributes 继承
+
+如果你**不想要**一个组件自动地继承 attribute，你可以在组件选项中设置 `inheritAttrs: false`。
+
+如果你使用了 `<script setup>`，你需要一个额外的 `<script>` 块来书写这个选项声明：
+
+```vue
+<script>
+// 使用普通的 <script> 来声明选项
+export default {
+  inheritAttrs: false
+}
+</script>
+
+<script setup>
+// ...setup 部分逻辑
+</script>
+```
+
+
+
+
+
+### 子组件暴露方法给父组件 
+
+可以通过 `defineExpose` 编译器宏来显式指定在 `<script setup>` 子组件中要暴露出去的属性：
+
+```vue {7-10}
+<script setup>
+import { ref } from 'vue'
+
+const a = 1
+const b = ref(2)
+
+defineExpose({
+  a,
+  b
+})
+</script>
+```
+
+父组件可以先用ref获得子组件，然后直接使用.value.a就可以获取子组件的a方法了
