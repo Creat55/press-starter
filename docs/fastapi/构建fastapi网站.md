@@ -33,6 +33,45 @@ if __name__ == "__main__":
 
 
 
+### 子路由定义
+
+```python
+from fastapi import APIRouter
+
+router = APIRouter()
+```
+
+可以将 `APIRouter` 视为一个「迷你 `FastAPI`」类。
+
+所有相同的选项都得到支持。
+
+所有相同的 `parameters`、`responses`、`dependencies`、`tags` 等等。
+
+### fastapi 主体
+
+```python
+from fastapi import Depends, FastAPI
+
+from .dependencies import get_query_token, get_token_header
+from .internal import admin
+from .routers import items, users
+
+app = FastAPI(dependencies=[Depends(get_query_token)])
+
+
+# 使用 app.include_router()，我们可以将每个 APIRouter 添加到主 FastAPI 应用程序中。
+app.include_router(users.router)
+app.include_router(items.router)
+app.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+    dependencies=[Depends(get_token_header)],
+    responses={418: {"description": "I'm a teapot"}},
+)
+
+```
+
 
 
 ## 2.url传参（路径参数、查询参数）和 请求体传参
@@ -252,6 +291,39 @@ class Item(BaseModel):
 ### 使用`response_model_include` (只要) 和`response_model_exclud`（排除） 来筛选key值
 
 
+
+
+
+### **可在多处定义响应信息，并合并
+
+**FastAPI** 支持合并 `response_model`、`status_code`、`responses` 参数等多个位置的响应信息。
+
+- 默认return的是一个JSonResponse，code=200，可以手工包裹一个JsonResponse，这样可以自定义code
+
+```python
+return JSONResponse(status_code=404, content={"message": "Item not found"})
+```
+
+- 也可以在装饰器中定义status_code
+
+```python
+@app.post(xxxx,status_code=204)
+```
+
+- 最详细的用法：`responses`参数用于定义不同状态码下的响应模型和描述。
+
+  `responses`参数允许你在路由处理函数中为不同的状态码提供自定义的响应模型和描述信息。它是一个包含状态码和响应模型的字典。
+
+  其中键是状态码，值是一个包含`model`和`description`的字典。`model`指定了响应的数据模型，可以是一个Pydantic模型类，而`description`是对该状态码的描述信息。
+
+```python
+@app.get("/items/{item_id}", 
+    response_model=Item,		# 这里的response_model 指定的是code200，会和responses中的200条目合并
+    responses={
+        200: {"model": Item, "description": "Success"},
+        404: {"model": Message, "description": "Item not found"},
+})
+```
 
 
 
@@ -527,7 +599,7 @@ async def read_item(item_id: int):
         "/items/",
         response_model=Item,
         summary="Create an item",
-        description="Create an item with all the information, name, description, price, tax and a set of unique tags",
+        description="Create an item with all the  information, name, description, price, tax and a set of unique tags",
     ```
 
   `description`也可以写在用""" """(即docstring)框起来的函数的注释中(支持markdown格式)。
@@ -547,16 +619,33 @@ async def read_item(item_id: int):
 - `response_description`
 
   注意，`response_description` 只用于描述响应，`description` 一般则用于描述*路径操作*。
-
 - `deprecated`
 
-  将接口标记为已经弃用
-  
-  ```python
-  @app.get("/elements/", tags=["items"], deprecated=True)
-  async def read_elements():
-      return [{"item_id": "Foo"}]
-  ```
+​	将接口标记为已经弃用
+
+### FastAPI和APIRouter
+
+- **Title**：在 OpenAPI 和自动 API 文档用户界面中作为 API 的标题/名称使用。
+- **Description**：在 OpenAPI 和自动 API 文档用户界面中用作 API 的描述。
+- **Version**：：API 版本，例如 `v2` 或者 `2.5.0`
+
+
+
+`prefix`、`tags`、`responses` 以及 `dependencies` 参数只是（和其他很多情况一样）**FastAPI** 的一个用于帮助你避免代码重复的功能。
+
+```python
+@app.get("/elements/", tags=["items"], deprecated=True)
+async def read_elements():
+    return [{"item_id": "Foo"}]
+```
+
+- 额外的 `responses`。
+
+用于表明该接口会响应哪几种response
+
+- `dependencies`
+
+​	全局依赖项，用于统一引入依赖项，这样所有的路径地址都不需要额外再引入 
 
 ## 8.依赖项
 
@@ -939,3 +1028,128 @@ Base = declarative_base()
 ```
 
 ### 创建Models
+
+```python
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    is_active = Column(Boolean, default=True)
+
+    items = relationship("Item", back_populates="owner")
+
+
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True)
+    description = Column(String, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+
+    owner = relationship("User", back_populates="items")
+```
+
+### 创建Schema
+
+```python
+from pydantic import BaseModel
+
+
+class ItemBase(BaseModel):
+    title: str
+    description: str | None = None
+
+
+class ItemCreate(ItemBase):
+    pass
+
+
+class Item(ItemBase):
+    id: int
+    owner_id: int
+
+    class Config:
+        orm_mode = True
+```
+
+### 定义CRUD
+
+### 创建依赖项
+
+```python
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+```
+
+## 13.后台任务
+
+**FastAPI** 可以定义返回响应后 运行的后台任务
+
+比如：
+
+- email发送： 可以立即返回响应并在后台发送电子邮件通知。
+- 处理数据： 例如，假设您收到一个必须经过缓慢处理的文件，您可以返回“已接受”（HTTP 202）的响应并在后台处理它。
+
+```python
+from fastapi import BackgroundTasks
+
+
+def write_notification(email: str, message=""):
+    with open("log.txt", mode="w") as email_file:
+        content = f"notification for {email}: {message}"
+        email_file.write(content)
+
+
+@app.post("/send-notification/{email}")
+async def send_notification(email: str, background_tasks: BackgroundTasks):
+    background_tasks.add_task(write_notification, email, message="some notification")
+    return {"message": "Notification sent in the background"}
+
+```
+
+注意：
+如果需要执行繁重的后台计算并且不一定需要它由同一进程运行（例如，不需要共享内存、变量等），可能会受益于使用其他更大的工具，例如Celery。
+它们往往需要更复杂的配置，消息/作业队列管理器，如 RabbitMQ 或 Redis，但它们允许在多个进程中运行后台任务，尤其是在多个服务器中。
+要查看示例，请查看Project Generators，它们都包含已配置的 Celery。
+但是，如您需要从同一个FastAPI应用程序访问变量和对象，或者需要执行小型后台任务（例如发送电子邮件通知），只需使用BackgroundTasks.
+
+### 新建一个任务函数
+
+任务函数是能接收参数的标准函数。
+
+### 声明 `BackgroundTasks` 类型的*路径操作函数*参数
+
+```python
+async def send_notification(email: str, background_tasks: BackgroundTasks):
+```
+
+### 添加后台任务
+
+在*路径操作函数*中，使用 `.add_task()` 方法把任务函数和参数传递给*后台任务*对象
+
+```python
+background_tasks.add_task(write_notification, email, message="some notification")
+```
+
+
+
+## 14.静态文件目录
+
+```python
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+#  /static是要挂载的子应用的路径。因此，挂载子应用会处理所有以 /static 开头的路径。
+#  directory="static" 是静态文件在本地的文件夹。
+#  name="static" 用于指定 FastAPI 内部使用的名称。
+
+
+```
+
