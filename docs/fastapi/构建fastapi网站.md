@@ -249,7 +249,13 @@ async def read_items(q: Annotated[str | None, Query(max_length=50)] = None):	// 
     return results
 ```
 
+### **Request类
 
+当你定义一个 FastAPI 路由处理函数时，可以使用 `Request` 类型的参数，以便在函数内部访问和操作请求对象的各个属性和方法。通过 `Request` 对象，你可以获取请求的头部信息、路径参数、查询参数、请求体数据等。
+
+`Request` 对象和 `Query`，`Param`，`Body` 参数声明器是紧密相关的，因为在路由处理函数中，你可以通过 `Request` 对象访问请求的各个部分，也可以通过 `Query`，`Param`，`Body` 参数声明器来指定参数的类型和验证规则，并从请求中提取和解析参数。
+
+综上所述，`Request` 类提供了对整个 HTTP 请求的访问和操作，`Query`、`Param` 和 `Body` 参数用于从 `Request` 对象中提取数据。
 
 ## 3.定义响应模型
 
@@ -289,42 +295,6 @@ class Item(BaseModel):
 - `response_model_exclude_none=True`
 
 ### 使用`response_model_include` (只要) 和`response_model_exclud`（排除） 来筛选key值
-
-
-
-
-
-### **可在多处定义响应信息，并合并
-
-**FastAPI** 支持合并 `response_model`、`status_code`、`responses` 参数等多个位置的响应信息。
-
-- 默认return的是一个JSonResponse，code=200，可以手工包裹一个JsonResponse，这样可以自定义code
-
-```python
-return JSONResponse(status_code=404, content={"message": "Item not found"})
-```
-
-- 也可以在装饰器中定义status_code
-
-```python
-@app.post(xxxx,status_code=204)
-```
-
-- 最详细的用法：`responses`参数用于定义不同状态码下的响应模型和描述。
-
-  `responses`参数允许你在路由处理函数中为不同的状态码提供自定义的响应模型和描述信息。它是一个包含状态码和响应模型的字典。
-
-  其中键是状态码，值是一个包含`model`和`description`的字典。`model`指定了响应的数据模型，可以是一个Pydantic模型类，而`description`是对该状态码的描述信息。
-
-```python
-@app.get("/items/{item_id}", 
-    response_model=Item,		# 这里的response_model 指定的是code200，会和responses中的200条目合并
-    responses={
-        200: {"model": Item, "description": "Success"},
-        404: {"model": Message, "description": "Item not found"},
-})
-```
-
 
 
 ## 4.表单处理
@@ -576,11 +546,17 @@ async def read_item(item_id: int):
 
 ## 7. MetaData
 
-### 路径操作
+### 路径操作装饰器
 
 - `status_code`
 
   status_code=status.HTTP_201_CREATED
+
+- `response_class`
+
+  默认情况下，FastAPI 使用 `JSONResponse` 作为响应类，但可以使用 `response_class` 参数来自定义响应类型。
+
+  可根据特定需求指定自定义的响应类，以控制响应的内容类型、状态码和其他属性。这能够灵活地定义返回给客户端的响应。
 
 - `Tags`
 
@@ -619,6 +595,7 @@ async def read_item(item_id: int):
 - `response_description`
 
   注意，`response_description` 只用于描述响应，`description` 一般则用于描述*路径操作*。
+  
 - `deprecated`
 
 ​	将接口标记为已经弃用
@@ -647,6 +624,10 @@ async def read_elements():
 
 ​	全局依赖项，用于统一引入依赖项，这样所有的路径地址都不需要额外再引入 
 
+- `default_response_class`
+
+  全局响应类，用于覆写Response类，定义响应的内容类型、状态码和其他属性
+
 ## 8.依赖项
 
 FastAPI有一个非常强大但直观的依赖注入系统
@@ -664,7 +645,7 @@ FastAPI有一个非常强大但直观的依赖注入系统
 
 可以把依赖项当作没有「装饰器」（即，没有 `@app.get("/some-path")` ）的路径操作函数。
 
-#### 依赖项使用注意事项
+### 依赖项使用注意事项
 
 - 这里只能传给 Depends 一个参数。（多个依赖项就要多次使用Depends）
 
@@ -673,7 +654,7 @@ FastAPI有一个非常强大但直观的依赖注入系统
 
 - 该函数接收的参数和*路径操作函数*的参数一样。
 
-#### Annotated带来的变化
+### Annotated带来的变化
 
 ```python
 CommonsDep = Annotated[dict, Depends(common_parameters)]	// 可以将Annotated 赋值给一个变量（其实不是赋值，是类型别名）
@@ -684,7 +665,7 @@ async def read_items(commons: CommonsDep):				// 使用更加方便
     return commons
 ```
 
-#### 使用类作为依赖项
+### 使用类作为依赖项
 
 当依赖项返回的值结构比较复杂时，定义一个类作为依赖项显然要比用函数更好，因为类中的参数和类型定义能被IDE读取到，而函数return的值内部结构IDE不会去猜。
 
@@ -714,13 +695,19 @@ async def read_items(commons: Annotated[CommonQueryParams, Depends()]):
 
 直接用Depends即可，fastapi也能正确的调用依赖类
 
-#### 注册全局依赖项
+#### **使用类实例化出来的对象作为依赖项
+
+使用类作为依赖项时，是调用`__init__`方法，来接收参数，并“return”一个对象。
+
+使用类的对象作为依赖项时，是调用`__call__`方法，来接收参数，类似函数了（但是在实例化的时候已经对这个对象进行了加工可以比函数有更多功能）
+
+### 注册全局依赖项
 
 ```python
 app = FastAPI(dependencies=[Depends(verify_token), Depends(verify_key)])
 ```
 
-#### yield
+### yield
 
 `yield` 是 Python 的一种语法，通过 yield 语句将值返回给调用者，并且函数仍可以保持自己的状态，以便在下次调用时恢复执行。
 
@@ -736,6 +723,10 @@ async def get_db():
     finally:
         db.close()
 ```
+
+### 为依赖项传入参数
+
+只有类作为依赖项可以实现这个功能，因为类有`__init__`和`__call__`,使用`__init__`来传入参数，使用`__call__`在执行时传入参数
 
 ## 9.安全性/登录/鉴权
 
@@ -928,6 +919,25 @@ async def add_process_time_header(request: Request, call_next):
     response.headers["X-Process-Time"] = str(process_time)
     return response
 ```
+
+在app中引入中间件
+
+```python
+# 引入中间件
+app.add_middleware(myMiddleware, some_config="rainbow")
+# 使用 app.middleware 方法时，它会检查传递给它的参数的类型。如果参数是一个函数，它将被视为函数形式的中间件。如果参数是一个类，它将被视为类形式的中间件。
+# 对于函数形式的中间件，app.middleware 方法会将函数直接添加到 FastAPI 应用程序的中间件列表中。这样，当请求进入应用程序时，每个中间件函数都会按照它们在列表中的顺序依次被调用。
+
+# 对于类形式的中间件，app.middleware 方法会创建中间件类的实例，并将应用程序实例作为参数传递给中间件类的 __init__ 方法。然后，它将中间件类的实例作为中间件对象添加到 FastAPI 应用程序的中间件列表中。当请求进入应用程序时，每个中间件对象的 __call__ 方法都会被调用。
+```
+
+### 内部集成的中间件介绍
+
+- `CORSMiddleware`：下一章单独讲
+- `HTTPSRedirectMiddleware`：强制规定所有传入的请求必须是https或wss。任何传入的对http或ws的请求都将被重定向到安全方案"s"上。
+
+- `TrustedHostMiddleware`：用于验证传入请求的主机（host）是否可信。它用于防止 HTTP Host Header 攻击和 Host Header 欺骗。
+- `GZipMiddleware`:它会自动检查响应的内容类型和大小。对于适合进行压缩的响应（如文本内容、JSON 数据等），`GZipMiddleware` 会在发送响应之前将其压缩为 Gzip 格式，并在响应的头部中添加相应的压缩信息。
 
 ## 11.CORS
 
@@ -1149,7 +1159,369 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 #  /static是要挂载的子应用的路径。因此，挂载子应用会处理所有以 /static 开头的路径。
 #  directory="static" 是静态文件在本地的文件夹。
 #  name="static" 用于指定 FastAPI 内部使用的名称。
+```
 
 
+
+
+
+## 15.自定义响应
+
+当创建 FastAPI 路径操作时，通常可以从中返回任何数据：字典、列表、Pydantic 模型、数据库模型等。
+
+然后，它会将 JSON 兼容的数据（例如字典）放入 JSONResponse 中（将return的内容放入该 JSONResponse 的`content`参数中），用于将响应发送给客户端。
+
+**也可以直接返回一个JSONResponse，并自定义其中的header，cookies,status_code等，当检测到return的是一个Response或者它的子类时，fastapi不会再做额外的加工转换操作，而是直接响应给客户端**
+
+使用jsonable_encoder，将复杂的数据格式转换为客户端可以读取的json格式
+
+### 定义status_code
+
+1.使用路由装饰器：可以在路由装饰器中使用`status_code`参数来指定响应的状态码。
+
+```python
+@app.get("/items/{item_id}", status_code=201)
+```
+
+2.抛出`HTTPException`异常：可以在路由处理函数中抛出`HTTPException`异常，并在异常中指定状态码。
+
+```python
+raise HTTPException(status_code=404, detail="Item not found")
+```
+
+3.直接返回响应对象，可以通过直接返回 Response（如 JSONResponse）并直接设置其他状态代码来实现。
+
+```python
+return JSONResponse(status_code=404, content={"message": "Item not found"})
+```
+
+
+
+### 可在多处定义响应信息文档（openapi），并合并
+
+**FastAPI** 支持合并 `response_model`、`status_code`、`responses` 参数等多个位置的响应信息。
+
+`responses`参数用于定义不同状态码下的响应模型和描述。
+
+`responses`参数允许你在路由处理函数中为不同的状态码提供自定义的响应模型和描述信息。它是一个包含状态码和响应模型的字典。
+
+其中键是状态码，值是一个包含`model`和`description`的字典。`model`指定了响应的数据模型，可以是一个Pydantic模型类，而`description`是对该状态码的描述信息。
+
+```python
+@app.get("/items/{item_id}", 
+    response_model=Item,		# 这里的response_model 指定的是code200，会和responses中的200条目合并
+    responses={
+        200: {"model": Item, "description": "Success"},
+        404: {"model": Message, "description": "Item not found"},
+})
+```
+
+
+
+### 定义响应类，以返回HTML，流，文件，其他。
+
+默认情况下，FastAPI 使用 `JSONResponse` 作为响应类，但可以使用 `response_class` 参数来自定义响应类型。
+
+可根据特定需求指定自定义的响应类，以控制响应的内容类型、状态码和其他属性。这能够灵活地定义返回给客户端的响应。
+
+#### `Response`
+
+所有其他的响应都继承自它。
+你可以直接返回它。
+它接受以下参数：
+
+- content - 一个字符串或字节。
+
+- status_code - 一个int HTTP状态代码。
+
+- headers - 一个字符串的dict。
+
+- media_type - 一个给出媒体类型的字符串。例如："text/html"。
+
+FastAPI（实际上是Starlette）将自动包括一个Content-Length头。它还将包括一个Content-Type头，基于media_type并为文本类型附加一个字符集。
+
+#### `HTMLResponse`和`PlainTextResponse`
+
+返回html网页和纯文本，其实就是在Response类中声明了media_type
+
+```python
+class HTMLResponse(Response):
+    media_type = "text/html"
+
+class PlainTextResponse(Response):
+    media_type = "text/plain"
+```
+
+#### `JSONResponse`
+
+默认响应类，也会猜测一下return的类型，如果是dict等类型，会转换为json
+
+#### `ORJSONResponse`和`UJSONResponse`
+
+- `orjson` 库在性能方面表现出色，比 `json` 和 `ujson` 更快。
+
+#### `RedirectRespons`
+
+返回status_code: int = 307,
+
+```python
+@app.get("/typer")
+async def redirect_typer():
+    return RedirectResponse("https://typer.tiangolo.com")
+```
+
+或者
+
+```python
+@app.get("/fastapi", response_class=RedirectResponse)
+async def redirect_fastapi():
+    return "https://fastapi.tiangolo.com"
+```
+
+都是可以的
+
+#### `StreamingResponse`
+
+流式传输响应体。
+
+```python
+async def fake_video_streamer():
+    for i in range(10):
+        yield b"some fake video bytes"
+
+
+@app.get("/")
+async def main():
+    return StreamingResponse(fake_video_streamer())
+```
+
+或
+```python
+@app.get("/")
+def main():
+    def iterfile():  # 
+        with open(some_file_path, mode="rb") as file_like:  # 
+            yield from file_like  # 
+
+    return StreamingResponse(iterfile(), media_type="video/mp4")
+```
+
+#### `FileResponse`
+
+一个高度集成的流式文件响应体，将以块大小=64kb发送文件。
+
+```python
+@app.get("/", response_class=FileResponse)
+async def main():
+    return some_file_path	# 可以直接从路径操作函数返回本地文件路径
+```
+
+文件响应将包括适当的 Content-Length、Last-Modified 和 ETag 标头。
+
+### 定义Cookies和headers
+
+```python
+@app.post("/cookie/")
+def create_cookie():
+    content = {"message": "Come to the dark side, we have cookies"}
+    headers = {"X-Cat-Dog": "alone in the world", "Content-Language": "en-US"}
+    response = JSONResponse(content=content, headers=headers)					# 新建response  直接装入headers
+    response.set_cookie(key="fakesession", value="fake-cookie-session-value")	# 通过set_cookie 设置key:value
+    return response															
+```
+
+另一种方法（更好看好用），在路径函数中添加参数：
+
+```python
+@app.post("/cookie-and-object/")
+def create_cookie(response: Response):	# 直接添加response参数，这样就生成了一个临时的response
+    response.set_cookie(key="fakesession", value="fake-cookie-session-value")	# 对这个response做加工，通过set_cookie 设置key:value
+    response.headers["X-Cat-Dog"] = "alone in the world"						# 通过header设置，注意header是个字典，可以直接用[]操作
+    return {"message": "Come to the dark side, we have cookies"}	# 只需要做正常的return，fastapi会将临时的response合并入正式的响应中
+```
+
+## 16.Mount 挂载子应用
+
+在静态应用中已经用到过mount
+
+```python
+app.mount("/static", StaticFiles(directory="static"), name="static")
+```
+
+Mount与使用APIRouter不同，因为挂载的应用程序是完全独立的。
+
+主应用程序中的 OpenAPI 和文档不会包含Mount的应用程序的任何内容。
+
+** FastAPI将使用ASGI规范中的一个称为root_path的机制来处理子应用程序的挂载路径。所以子应用是知道主应用所在的rootpath的
+
+## 17.WebSocket
+
+前端JS代码：
+
+```html
+<script>
+    var ws = new WebSocket("ws://localhost:8000/ws");
+    ws.onmessage = function(event) {
+        var messages = document.getElementById('messages')
+        var message = document.createElement('li')
+        var content = document.createTextNode(event.data)
+        message.appendChild(content)
+        messages.appendChild(message)
+    };
+    function sendMessage(event) {
+        var input = document.getElementById("messageText")
+        ws.send(input.value)
+        input.value = ''
+        event.preventDefault()
+    }
+</script>
+```
+
+fastapi后端代码：
+
+```python
+# 监听ws
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()		# 接受连接。此方法将发送一个HTTP响应，其中包含一个Sec-WebSocket-Accept头，该头包含一个经过验证的Sec-WebSocket-Key值
+    while True:
+        data = await websocket.receive_text()	# 一直等待接收
+        await websocket.send_text(f"Message text was: {data}")	# 响应
+```
+
+```python
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)	# 加入活动列表中
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)	# 移出活动列表
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
+
+manager = ConnectionManager()	
+
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: int):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            await manager.send_personal_message(f"You wrote: {data}", websocket)
+            await manager.broadcast(f"Client #{client_id} says: {data}")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast(f"Client #{client_id} left the chat")
+```
+
+## 18.生命周期事件
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the ML model
+    ml_models["answer_to_everything"] = fake_answer_to_everything_ml_model
+    yield
+    # Clean up the ML models and release the resources
+    ml_models.clear()
+
+
+app = FastAPI(lifespan=lifespan)	# 在创建Fastapi时声明
+```
+
+新版本中对生命周期进行了简化（使用yield），只需要定义一个异步上下文管理器，在函数中yield之前的部分是on_event(startup)，yield之后的部分是on_event(shutdown)
+
+## 19.环境变量设置
+
+在linux系统中
+
+- 临时设置：使用export命令，例如：
+
+```bash
+export MY_NAME="Wade Wilson"
+```
+
+这种方法只在当前终端有效。
+
+
+  - 当前用户的全局设置：~/.bashrc文件
+  
+  - 所有用户的全局设置：/etc/profile文件
+  - 修改完成后执行`source ~/.bashrc`
+
+### 使用os库读取环境变量
+
+```python
+import os
+
+name = os.getenv("MY_NAME", "World")
+```
+
+### 使用pydantic的BaseSettings读取环境变量
+
+```python
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    app_name: str = "Awesome API"
+    admin_email: str
+    items_per_user: int = 50
+    
+settings = Settings()
+```
+
+BaseSettings在构造的时候会用os库读取类属性名对应的环境变量,非常方便
+
+### linux快捷设置多个环境变量
+
+```bash
+VAR1=value1 VAR2=value2 mycommand	# 在Linux中，可以在命令前设置环境变量，这些变量只对该命令有效。
+```
+
+所以可以用以下命令启动uvicorn 并传入环境变量:
+
+```python
+ADMIN_EMAIL="deadpool@example.com" APP_NAME="ChimichangApp" uvicorn main:app
+```
+
+### 将配置项的读取放入Depends中
+
+```python
+@lru_cache()		# 放入缓存，下次再调用这个接口时将直接返回，可以有效较少IO次数
+def get_settings():
+    return Settings()
+
+
+async def info(settings: Annotated[Settings, Depends(get_settings)]):	# 要用的时候就可以通过Depends读取了，更易读
+```
+
+### 使用.env文件配置环境变量
+
+如果你有很多变量需要设置，那使用文件的方式肯定更好，这些环境变量通常放在一个文件 .env 中
+
+pydantic的BaseSettings类自带可以读取.env文件的方法：
+
+```python
+from pydantic import BaseSettings
+
+class Settings(BaseSettings):
+    app_name: str = "Awesome API"
+    admin_email: str
+    items_per_user: int = 50
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = 'utf-8'		# 默认就是，不写也可以
 ```
 
